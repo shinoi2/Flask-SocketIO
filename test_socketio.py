@@ -254,6 +254,9 @@ class MyNamespace(Namespace):
     def on_exit(self, data):
         disconnect()
 
+    def on_exit_sid(self, sid):
+        disconnect(sid)
+
     def on_my_custom_event(self, data):
         emit('my custom response', data)
         if not data.get('noackargs'):
@@ -708,6 +711,21 @@ class TestSocketIO(unittest.TestCase):
         self.assertFalse(client2.is_connected('/ns'))
         with self.assertRaises(RuntimeError):
             client2.emit('hello', {}, namespace='/ns')
+
+    def test_server_disconnected_with_sid(self):
+        client = socketio.test_client(app, namespace='/ns')
+        client2 = socketio.test_client(app, namespace='/ns')
+        client.get_received('/ns')
+        client2.get_received('/ns')
+        client.emit('exit_sid', client2.sid, namespace='/ns')
+        self.assertTrue(client.is_connected('/ns'))
+        self.assertFalse(client2.is_connected('/ns'))
+        with self.assertRaises(RuntimeError):
+            client2.emit('hello', {}, namespace='/ns')
+        client.emit('exit_sid', client.sid, namespace='/ns')
+        self.assertFalse(client.is_connected('/ns'))
+        with self.assertRaises(RuntimeError):
+            client.emit('hello', {}, namespace='/ns')
 
     def test_emit_class_based(self):
         client = socketio.test_client(app, namespace='/ns')
